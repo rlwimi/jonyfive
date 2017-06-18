@@ -23,7 +23,7 @@ private let yearOption = Flag(
 private let sessionOption = Flag(
   shortName: "s",
   longName: "session",
-  type: Int.self,
+  type: String.self,
   description: "filter by session",
   required: false,
   inheritable: true
@@ -40,7 +40,7 @@ private let outputPathOption = Flag(
 
 var debugEnabled = false
 var filterYear: Int?
-var filterSession: Int?
+var filterSession: String?
 var outputPath: URL?
 
 private func configuration(command: Command) {
@@ -62,7 +62,7 @@ private func configuration(command: Command) {
       filterYear = year
     }
 
-    if let session = flags.getInt(name: sessionOption.longName) {
+    if let session = flags.getString(name: sessionOption.longName) {
       if filterYear == nil {
         print("Session filtering requires year filtering. Use `--year` flag to select a year.")
         return false
