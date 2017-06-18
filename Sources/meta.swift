@@ -1,4 +1,7 @@
+import Foundation
 import Guaka
+import Kanna
+
 
 var metaCommand = Command(usage: "meta", configuration: configuration, run: execute)
 
@@ -9,4 +12,15 @@ private func configuration(command: Command) {
 }
 
 private func execute(flags: Flags, args: [String]) {
+  print("calling meta")
+
+  let baseUrl = URL(string: "https://developer.apple.com")!
+
+  guard let doc = HTML(url: baseUrl, encoding: .utf8) else {
+    return
+  }
+
+  if let debug = flags.getBool(name: debug.longName), debug {
+    print("\(doc.title ?? "no title")")
+  }
 }
