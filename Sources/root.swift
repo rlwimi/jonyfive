@@ -19,16 +19,43 @@ let year = Flag(
   inheritable: true
 )
 
+let session = Flag(
+  shortName: "s",
+  longName: "session",
+  type: Int.self,
+  description: "filter by session",
+  required: false,
+  inheritable: true
+)
+
+var debugEnabled = false
+var filterYear: Int?
+var filterSession: Int?
+
 private func configuration(command: Command) {
   command.longMessage = "Collect public information available at Apple's developer site and act on it in various ways."
-  command.add(flags: [debug, year])
+  command.add(flags: [debug, year, session])
 
   command.inheritablePreRun = { flags, args in
-    if let year = flags.getInt(name: year.longName), year < 2012 || year > 2017 {
+
+    if let year = flags.getInt(name: year.longName) {
       // TODO: can we hook into validation to fail the command?
-      print("Year not supported: \(year)q")
-      return false
+      if year < 2012 || year > 2017 {
+        print("Year not supported: \(year)")
+        return false
+      }
+      filterYear = year
     }
+
+    if let session = flags.getInt(name: session.longName) {
+      if filterYear == nil {
+        print("Session filtering requires year filtering. Use `--year` flag to select a year.")
+        return false
+      } else {
+        filterSession = session
+      }
+    }
+
     return true
   }
 }
