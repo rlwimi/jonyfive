@@ -1,8 +1,9 @@
+import Foundation
 import Guaka
 
 var rootCommand = Command(usage: "wwwww", configuration: configuration, run: execute)
 
-let debug = Flag(
+private let debugOption = Flag(
   shortName: "d",
   longName: "debug",
   value: false,
@@ -10,7 +11,7 @@ let debug = Flag(
   inheritable: true
 )
 
-let year = Flag(
+private let yearOption = Flag(
   shortName: "y",
   longName: "year",
   type: Int.self,
@@ -19,7 +20,7 @@ let year = Flag(
   inheritable: true
 )
 
-let session = Flag(
+private let sessionOption = Flag(
   shortName: "s",
   longName: "session",
   type: Int.self,
@@ -28,21 +29,31 @@ let session = Flag(
   inheritable: true
 )
 
+private let outputPathOption = Flag(
+  shortName: "o",
+  longName: "output",
+  type: String.self,
+  description: "output path",
+  required: false,
+  inheritable: true
+)
+
 var debugEnabled = false
 var filterYear: Int?
 var filterSession: Int?
+var outputPath: URL?
 
 private func configuration(command: Command) {
   command.longMessage = "Collect public information available at Apple's developer site and act on it in various ways."
-  command.add(flags: [debug, year, session])
+  command.add(flags: [debugOption, yearOption, sessionOption, outputPathOption])
 
   command.inheritablePreRun = { flags, args in
 
-    if let enabled = flags.getBool(name: debug.longName) {
+    if let enabled = flags.getBool(name: debugOption.longName) {
       debugEnabled = enabled
     }
 
-    if let year = flags.getInt(name: year.longName) {
+    if let year = flags.getInt(name: yearOption.longName) {
       // TODO: can we hook into validation to fail the command?
       if year < 2012 || year > 2017 {
         print("Year not supported: \(year)")
@@ -51,13 +62,17 @@ private func configuration(command: Command) {
       filterYear = year
     }
 
-    if let session = flags.getInt(name: session.longName) {
+    if let session = flags.getInt(name: sessionOption.longName) {
       if filterYear == nil {
         print("Session filtering requires year filtering. Use `--year` flag to select a year.")
         return false
       } else {
         filterSession = session
       }
+    }
+
+    if let output = flags.getString(name: outputPathOption.longName) {
+      outputPath = URL(fileURLWithPath: output)
     }
 
     return true

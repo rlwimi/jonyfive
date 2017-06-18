@@ -41,7 +41,7 @@ private func execute(flags: Flags, args: [String]) {
         else {
           return
       }
-      if debugEnabled { print("Collecting sessions in track: \(track)") }
+      if debugEnabled { print("Scanning sessions in track: \(track)") }
 
       items.xpath(".//a").forEach { a in
         guard
@@ -171,11 +171,11 @@ private func execute(flags: Flags, args: [String]) {
     }
   }
   do {
-    print(sessions.values.first!.dictionary)
+    if debugEnabled { print(sessions.values.first!.dictionary) }
     let dictionaries = Array(sessions.values.map({ $0.dictionary }))
     try JSONSerialization
       .data(withJSONObject: dictionaries, options: .prettyPrinted)
-      .write(to: URL(fileURLWithPath: "./sessions.json"))
+      .write(to: outputPath ?? URL(fileURLWithPath: "./sessions.json"))
   } catch {
     print(error)
   }
