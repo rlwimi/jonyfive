@@ -38,6 +38,10 @@ private func configuration(command: Command) {
 
   command.inheritablePreRun = { flags, args in
 
+    if let enabled = flags.getBool(name: debug.longName) {
+      debugEnabled = enabled
+    }
+
     if let year = flags.getInt(name: year.longName) {
       // TODO: can we hook into validation to fail the command?
       if year < 2012 || year > 2017 {
