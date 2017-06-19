@@ -48,7 +48,6 @@ struct Session: Identifiable {
     number: String,
     title: String,
     track: Track,
-    vtt: URL?,
     year: String) {
 
     self.identifier = Session.makeIdentifier(conference: conference, year: year, number: number)
@@ -62,8 +61,16 @@ struct Session: Identifiable {
     self.number = number
     self.title = title
     self.track = track
-    self.vtt = vtt
     self.year = year
+
+    var components = URLComponents(url: downloadSD, resolvingAgainstBaseURL: true)!
+    components.query = nil
+    var url = components.url!
+    url.deletePathExtension()
+    let basename = url.lastPathComponent
+    url.deleteLastPathComponent()
+    url.appendPathComponent("/subtitles/eng/\(basename).vtt")
+    vtt = url
   }
 }
 
