@@ -25,7 +25,7 @@ func scrapeSessions(filterBy filterYear: Int? = nil, session filterSession: Stri
   return sessions
 }
 
-func scrapeSessions(from year: Int, filterBy filterSession: String? = nil) -> [Session] {
+fileprivate func scrapeSessions(from year: Int, filterBy filterSession: String? = nil) -> [Session] {
   guard let yearDoc = HTML(url: wwdcUrl(for: year), encoding: .utf8) else {
     print("could not read URL for year \(year)")
     return []
@@ -44,7 +44,7 @@ func scrapeSessions(from year: Int, filterBy filterSession: String? = nil) -> [S
   return sessions
 }
 
-func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -> [Session] {
+fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -> [Session] {
   guard
     let header = nodes.first,
     let items = nodes.last,
@@ -57,15 +57,24 @@ func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -> [Session] 
 
   var sessions: [Session] = []
 
+  var sessionImages: [Identifier<Session>: URL] = [:]
+
   items.xpath(".//a").forEach { anchor in
-    // There are two links, the image and the title. Skip the title. We'll use the image's alt text.
-    guard let _ = anchor.xpath(".//img").first else {
+    let number = scrapeSessionNumber(from: anchor)
+    let identifier = Session.makeIdentifier(conference: .wwdc, year: String(year), number: number)
+
+    // Sessions before 2015 do not have an image. If this is an image anchor, dig the URL, cache, and pass.
+    if let imageUrl = scrapeSessionImage(from: anchor) {
+      sessionImages[identifier] = imageUrl
       return
     }
 
-    guard let (number, title, imageUrl, webpageUrl) = scrapeSessionInfo(from: anchor) else {
-      return
-    }
+    // `anchor` is the title link, which proceeds any image link.
+
+    let imageUrl = sessionImages[identifier]
+
+    let title = scrapeSessionTitle(from: anchor)
+    let webpageUrl = scrapeSessionPageUrl(from: anchor)
 
     if let filter = filterSession, number != filter {
       return
@@ -112,25 +121,36 @@ func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -> [Session] 
   return sessions
 }
 
-func scrapeSessionInfo(from anchor: Kanna.XMLElement) -> (sessionNumber: String, title: String, imageUrl: URL, webpageUrl: URL)? {
-  guard
-    let href = anchor["href"],
-    let hrefUrl = URL(string: href),
-    let image = anchor.xpath("child::*").first,
-    let imageUrlValue = image["src"],
-    let imageUrl = URL(string: imageUrlValue),
-    let title = image["alt"],
-    let webpageUrl = URL(string: href, relativeTo: baseUrl)
-    else {
-      print("could not dig session info out of anchor: \(String(describing: anchor.toHTML))")
-      return nil
-  }
-  let number = hrefUrl.lastPathComponent
-
-  return (number, title, imageUrl, webpageUrl)
+fileprivate func scrapeSessionNumber(from anchor: Kanna.XMLElement) -> String {
+  return scrapeSessionPageUrl(from: anchor).lastPathComponent
 }
 
-func scrapeSessionDetails(from doc: HTMLDocument) -> (description: String, focuses: String)? {
+fileprivate func scrapeSessionImage(from anchor: Kanna.XMLElement) -> URL? {
+  guard
+    let image = anchor.xpath("child::*").first,
+    let imageUrlValue = image["src"],
+    let imageUrl = URL(string: imageUrlValue)
+    else {
+      return nil
+  }
+  return imageUrl
+}
+
+fileprivate func scrapeSessionTitle(from anchor: Kanna.XMLElement) -> String {
+  return anchor.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+}
+
+fileprivate func scrapeSessionPageUrl(from anchor: Kanna.XMLElement) -> URL {
+  guard
+    let href = anchor["href"],
+    let hrefUrl = URL(string: href, relativeTo: baseUrl)
+    else {
+      return baseUrl
+  }
+  return hrefUrl
+}
+
+fileprivate func scrapeSessionDetails(from doc: HTMLDocument) -> (description: String, focuses: String)? {
   for listItem in doc.xpath("//li[contains(@data-supplement-id, 'details')]") {
     // Skip the details tab element.
     if let `class` = listItem["class"], `class`.range(of: "supplement details") == nil {
@@ -161,41 +181,43 @@ func scrapeSessionDetails(from doc: HTMLDocument) -> (description: String, focus
   return nil
 }
 
-func scrapeSessionResources(from doc: HTMLDocument) -> (sdVideoUrl: URL, hdVideoUrl: URL)? {
+fileprivate func scrapeSessionResources(from doc: HTMLDocument) -> (sdVideoUrl: URL, hdVideoUrl: URL)? {
   for resourcesListItem in doc.xpath("//li[contains(@data-supplement-id, 'resources')]") {
     // Skip the resources tab element.
     if let `class` = resourcesListItem["class"], `class`.range(of: "supplement resources") == nil {
       continue
     }
 
-    var sdVideoUrl: URL!
-    var hdVideoUrl: URL!
+    var sdVideoUrl: URL?
+    var hdVideoUrl: URL?
 
-    guard let videosListItem = resourcesListItem.at_xpath(".//li[contains(@class, 'video')]") else {
-      print("could not find videos resource node")
-      return nil
-    }
+    for videoListItem in resourcesListItem.xpath(".//li[contains(@class, 'video')]") {
 
-    videosListItem.xpath(".//a").forEach { anchor in
-      guard let text = anchor.innerHTML else {
-        return
-      }
-      switch text {
-      case "HD Video":
-        guard let value = anchor["href"], let url = URL(string: value) else {
+      videoListItem.xpath(".//a").forEach { anchor in
+        guard let text = anchor.innerHTML else {
           return
         }
-        hdVideoUrl = url
-      case "SD Video":
-        guard let value = anchor["href"], let url = URL(string: value) else {
-          return
+        switch text {
+        case "HD Video":
+          guard let value = anchor["href"], let url = URL(string: value) else {
+            return
+          }
+          hdVideoUrl = url
+        case "SD Video":
+          guard let value = anchor["href"], let url = URL(string: value) else {
+            return
+          }
+          sdVideoUrl = url
+        default:
+          break
         }
-        sdVideoUrl = url
-      default:
-        break
+      }
+
+      // These won't have been populated when a session's resources point to another session's video.
+      if let sdVideoUrl = sdVideoUrl, let hdVideoUrl = hdVideoUrl {
+        return (sdVideoUrl, hdVideoUrl)
       }
     }
-    return (sdVideoUrl, hdVideoUrl)
   }
   return nil
 }

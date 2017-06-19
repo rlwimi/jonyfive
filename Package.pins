@@ -2,6 +2,12 @@
   "autoPin": true,
   "pins": [
     {
+      "package": "FileUtils",
+      "reason": null,
+      "repositoryURL": "https://github.com/oarrabi/FileUtils.git",
+      "version": "0.1.1"
+    },
+    {
       "package": "Guaka",
       "reason": null,
       "repositoryURL": "https://github.com/oarrabi/Guaka.git",

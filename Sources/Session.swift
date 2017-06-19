@@ -16,6 +16,18 @@ enum Track: String {
   case design = "Design"
   case media = "Media"
   case distribution = "Distribution"
+
+  // pre-2015 tracks
+  case appServices = "App Services"
+  case coreOS = "Core OS"
+  case essentials = "Essentials"
+  case general = "General"
+  case graphicsMediaAndGames = "Graphics, Media & Games"
+  case safariAndWeb = "Safari & Web"
+  case frameworks = "Frameworks"
+  case services = "Services"
+  case specialEvents = "Special Events"
+  case tools = "Tools"
 }
 
 enum Conference: String {
@@ -30,7 +42,7 @@ struct Session: Identifiable {
   let downloadSD: URL
   let duration: Int?
   let focuses: [Focus]
-  let image: URL
+  let image: URL?
   let number: String
   let title: String
   let track: Track
@@ -44,7 +56,7 @@ struct Session: Identifiable {
     downloadSD: URL,
     duration: Int?,
     focuses: [Focus],
-    image: URL,
+    image: URL?,
     number: String,
     title: String,
     track: Track,

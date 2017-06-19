@@ -8,7 +8,7 @@ extension Session {
     d["download_sd"] = downloadSD.absoluteString
     d["duration"] = duration ?? nil
     d["focus"] = focuses.map({ $0.rawValue })
-    d["shelf"] = ["image": image.absoluteString]
+    d["image"] = image?.absoluteString
     d["id"] = number
     d["track"] = track.rawValue
     d["title"] = title
