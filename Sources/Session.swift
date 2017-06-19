@@ -75,13 +75,11 @@ struct Session: Identifiable {
     self.track = track
     self.year = year
 
-    var components = URLComponents(url: downloadSD, resolvingAgainstBaseURL: true)!
-    components.query = nil
-    var url = components.url!
+    var url = downloadSD.deletingQuery
     url.deletePathExtension()
     let basename = url.lastPathComponent
     url.deleteLastPathComponent()
-    url.appendPathComponent("/subtitles/eng/\(basename).vtt")
+    url.appendPathComponent("subtitles/eng/\(basename).vtt")
     vtt = url
   }
 }
