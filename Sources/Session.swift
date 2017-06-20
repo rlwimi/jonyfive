@@ -46,8 +46,16 @@ struct Session: Identifiable {
   let number: String
   let title: String
   let track: Track
-  let vtt: URL?
   let year: String
+
+  var webVttUrl: URL {
+    var url = downloadSD.deletingQuery
+    url.deletePathExtension()
+    let basename = url.lastPathComponent
+    url.deleteLastPathComponent()
+    url.appendPathComponent("subtitles/eng/\(basename).vtt")
+    return url
+  }
 
   init(
     conference: Conference,
@@ -74,13 +82,6 @@ struct Session: Identifiable {
     self.title = title
     self.track = track
     self.year = year
-
-    var url = downloadSD.deletingQuery
-    url.deletePathExtension()
-    let basename = url.lastPathComponent
-    url.deleteLastPathComponent()
-    url.appendPathComponent("subtitles/eng/\(basename).vtt")
-    vtt = url
   }
 }
 
@@ -102,8 +103,7 @@ extension Session: Equatable {
       lhs.focuses == rhs.focuses &&
       lhs.image == rhs.image &&
       lhs.title == rhs.title &&
-      lhs.track == rhs.track &&
-      lhs.vtt == rhs.vtt
+      lhs.track == rhs.track
   }
 }
 

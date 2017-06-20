@@ -5,10 +5,73 @@ import FileUtils
 var webvttCommand = Command(
   usage: "webvtt", configuration: configuration, run: execute)
 
+fileprivate let subtitlesPlaylistOption = Flag(
+  shortName: "p",
+  longName: "playlist",
+  type: Bool.self,
+  description: "WebVTT cues acquisition strategy\n\t[no flag] Download URL, fallback to subtitles playlist.\n\t[true] Use HLS subtitles playlist exclusively.\n\t[false] Do not fall back to HLS subtitles playlist.",
+  required: false,
+  inheritable: false
+)
+
+/// Strategy for acquiring WebVTT cues.
+///
+/// There are two methods of acquiring a session's WebVTT cues (captions, subtitles):
+///
+/// 1. Fetch the full WebVTT file from a likely location. The full WebVTT file is commonly located
+///    at a URL following a particular format, though this does not work for all sessions.
+/// 2. Read the session's HLS master playlist, read its subtitles media playlist, fetch each file
+///    in the sequence, and concatenate the files. Perform some post-processing to eliminate
+///    artifacts of concatenation.
+///
+/// - note: For each session, one, none, or both strategies may be effective. When both are
+///         effective, the content is not always identical. There may be millisecond differences in
+///         cue timing or even cue content differences in rare cases.
+fileprivate enum AcquisitionStrategy {
+  /// Attempt URL download, fall back to subtitles playlist file concatenation, if necessary.
+  case fallback
+  /// Use HLS subtitles playlist file concatenation exclusively.
+  case useSubtitlesPlaylist
+  /// Use direct download, exclusively.
+  case useDirectDownload
+
+  var usesDownloadUrl: Bool {
+    switch self {
+    case .fallback:
+      return true
+    case .useSubtitlesPlaylist:
+      return false
+    case .useDirectDownload:
+      return true
+    }
+  }
+
+  var usesSubtitlesPlaylist: Bool {
+    switch self {
+    case .fallback:
+      return true
+    case .useSubtitlesPlaylist:
+      return true
+    case .useDirectDownload:
+      return false
+    }
+  }
+}
+
+fileprivate var acquisitionStrategy: AcquisitionStrategy = .fallback
 
 private func configuration(command: Command) {
   command.shortMessage = "download WebVTT files"
   command.longMessage = "Download each session's WebVTT file, write to disk."
+
+  command.add(flag: subtitlesPlaylistOption)
+
+  command.preRun = { flags, args in
+    if let usePlaylists = flags.getBool(name: subtitlesPlaylistOption.longName) {
+      acquisitionStrategy = (usePlaylists ? .useSubtitlesPlaylist : .useDirectDownload)
+    }
+    return true
+  }
 }
 
 private func execute(flags: Flags, args: [String]) {
@@ -22,21 +85,21 @@ private func execute(flags: Flags, args: [String]) {
   }
 
   sessions.forEach { session in
-    guard let vttUrl = session.vtt else {
-      print("Missing WebVTT URL for \(session.year) session #\(session.number)")
-      return
+    if debugEnabled { print("##### \(session.year) session #\(session.number) #####") }
+
+    var vttText: String? = nil
+
+    if acquisitionStrategy.usesDownloadUrl {
+      vttText = webVttText(from: session.webVttUrl)
     }
 
-    var vttText = webVttText(from: vttUrl)
-    if vttText == nil {
-      print("Attempting fallback, concatenating m3u8 sequence files...")
-      vttText = concatenateM3u8SequenceFiles(for: session)
+    if vttText == nil && acquisitionStrategy.usesSubtitlesPlaylist {
+      vttText = concatenateSubtitlesPlaylistFiles(for: session)
     }
 
-    if let vttText = vttText {
+    if var vttText = vttText {
+      vttText = normalize(vttText)
       write(vttText, for: session)
-    } else {
-      print("Fallback concatenation failed.")
     }
   }
 }
@@ -67,7 +130,9 @@ fileprivate func webVttText(from url: URL) -> String? {
   return vttText
 }
 
-fileprivate func concatenateM3u8SequenceFiles(for session: Session) -> String? {
+fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> String? {
+  print("Concatenating subtitles media playlist files")
+
   let queryless = session.downloadSD.deletingQuery
   let baseUrl = queryless.deletingLastPathComponent()
   let m3u8Url = baseUrl.appendingPathComponent("subtitles/eng/prog_index.m3u8")
@@ -78,12 +143,12 @@ fileprivate func concatenateM3u8SequenceFiles(for session: Session) -> String? {
   do {
     m3u8Text = try String(contentsOf: m3u8Url, encoding: .utf8)
   } catch {
-    print("Could not fetch m3u8: \(error)")
+    print("Could not fetch subtitles media playlist: \(error)")
   }
 
   if let signature = m3u8Text.components(separatedBy: .whitespacesAndNewlines).first {
     if signature.range(of: "#EXTM3U") == nil {
-      print("m3u8 unavailable")
+      print("Subtitles media playlist unavailable")
       return nil
     }
   }
@@ -99,7 +164,7 @@ fileprivate func concatenateM3u8SequenceFiles(for session: Session) -> String? {
       let fileText = try String(contentsOf: fileUrl, encoding: .utf8)
       vttText.append(fileText)
     } catch {
-      print("Could not fetch m3u8 sequence file: \(fileUrl)")
+      print("Could not fetch subtitles sequence file: \(fileUrl)")
       return nil
     }
   }
@@ -108,12 +173,11 @@ fileprivate func concatenateM3u8SequenceFiles(for session: Session) -> String? {
   if vttText.isEmpty {
     return nil
   } else {
-    vttText = normalize(vttText)
     return vttText
   }
 }
 
-/// Fixes issues created by concatenating subtitle m3u8 sequence files.
+/// Resolves artifacts of subtitle media playlist files concatenation.
 fileprivate func normalize(_ vttText: String) -> String {
   var text = removeCarriageReturns(from: vttText)
   text = removeRedundantFileSignatures(from: text)
