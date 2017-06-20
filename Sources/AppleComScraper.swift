@@ -27,11 +27,11 @@ func scrapeSessions(filterBy filterYear: Int? = nil, session filterSession: Stri
 
 fileprivate func scrapeSessions(from year: Int, filterBy filterSession: String? = nil) -> [Session] {
   guard let yearDoc = HTML(url: wwdcUrl(for: year), encoding: .utf8) else {
-    print("could not read URL for year \(year)")
+    if verboseEnabled { print("could not read URL for year \(year)") }
     return []
   }
 
-  if debugEnabled { print("Scraping \(wwdcUrl(for: year))") }
+  if verboseEnabled { print("Scraping \(wwdcUrl(for: year))") }
 
   var sessions: [Session] = []
 
@@ -50,10 +50,10 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
     let items = nodes.last,
     let track = header.content?.trimmingCharacters(in: .whitespacesAndNewlines)
     else {
-      print("could not parse node set: \(String(describing: nodes.toHTML))")
+      if verboseEnabled { print("could not parse node set: \(String(describing: nodes.toHTML))") }
       return []
   }
-  if debugEnabled { print("Scanning sessions in track: \(track)") }
+  if verboseEnabled { print("Scanning sessions in track: \(track)") }
 
   var sessions: [Session] = []
 
@@ -81,21 +81,19 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
     }
 
     guard let sessionDoc = HTML(url: webpageUrl, encoding: .utf8) else {
-      print("could not read session page: \(webpageUrl.absoluteString)")
+      if verboseEnabled { print("could not read session page: \(webpageUrl.absoluteString)") }
       return
     }
 
-    if debugEnabled {
-      print("Scraping \(year) session #\(number)...", terminator: "")
-    }
+    if verboseEnabled { print("Scraping \(year) session #\(number)...", terminator: "") }
 
     guard let (description, focuses) = scrapeSessionDetails(from: sessionDoc) else {
-      print("could not find details for \(year) session #\(number)")
+      if verboseEnabled { print("could not find details for \(year) session #\(number)") }
       return
     }
 
     guard let (sdVideoUrl, hdVideoUrl) = scrapeSessionResources(from: sessionDoc) else {
-      print("could not find resources for \(year) session #\(number)")
+      if verboseEnabled { print("could not find resources for \(year) session #\(number)") }
       return
     }
 
@@ -114,7 +112,7 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
       year: yearString
     )
 
-    if debugEnabled { print("done.") }
+    if verboseEnabled { print("done.") }
 
     sessions.append(session)
   }

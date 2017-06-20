@@ -3,11 +3,11 @@ import Guaka
 
 var rootCommand = Command(usage: "wwwww", configuration: configuration, run: execute)
 
-private let debugOption = Flag(
-  shortName: "d",
-  longName: "debug",
+private let verboseOption = Flag(
+  shortName: "v",
+  longName: "verbose",
   value: false,
-  description: "Show the work as it is being done.",
+  description: "show work along the way",
   inheritable: true
 )
 
@@ -38,19 +38,19 @@ private let outputPathOption = Flag(
   inheritable: true
 )
 
-var debugEnabled = false
+var verboseEnabled = false
 var filterYear: Int?
 var filterSession: String?
 var outputPath: URL?
 
 private func configuration(command: Command) {
   command.longMessage = "Collect public information available at Apple's developer site and act on it in various ways."
-  command.add(flags: [debugOption, yearOption, sessionOption, outputPathOption])
+  command.add(flags: [verboseOption, yearOption, sessionOption, outputPathOption])
 
   command.inheritablePreRun = { flags, args in
 
-    if let enabled = flags.getBool(name: debugOption.longName) {
-      debugEnabled = enabled
+    if let enabled = flags.getBool(name: verboseOption.longName) {
+      verboseEnabled = enabled
     }
 
     if let year = flags.getInt(name: yearOption.longName) {

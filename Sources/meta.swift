@@ -16,6 +16,6 @@ private func execute(flags: Flags, args: [String]) {
       .data(withJSONObject: dictionaries, options: .prettyPrinted)
       .write(to: outputPath ?? URL(fileURLWithPath: "./sessions.json"))
   } catch {
-    print(error)
+    if verboseEnabled { print(error) }
   }
 }

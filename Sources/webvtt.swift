@@ -85,7 +85,7 @@ private func execute(flags: Flags, args: [String]) {
   }
 
   sessions.forEach { session in
-    if debugEnabled { print("##### \(session.year) session #\(session.number) #####") }
+    if verboseEnabled { print("##### \(session.year) session #\(session.number) #####") }
 
     var vttText: String? = nil
 
@@ -115,15 +115,15 @@ fileprivate func path(for session: Session) -> String {
 fileprivate func webVttText(from url: URL) -> String? {
   var vttText: String!
   do {
-    print("Fetching WebVTT from \(url.absoluteString)")
+    if verboseEnabled { print("Fetching WebVTT from \(url.absoluteString)") }
     vttText = try String(contentsOf: url)
   } catch {
-    print("Could not fetch WebVTT at \(url.absoluteString)")
+    if verboseEnabled { print("Could not fetch WebVTT at \(url.absoluteString)") }
     return nil
   }
 
   if vttText.range(of: "WEBVTT") == nil {
-    print("Received non-WebVTT response")
+    if verboseEnabled { print("Received non-WebVTT response") }
     return nil
   }
 
@@ -131,7 +131,7 @@ fileprivate func webVttText(from url: URL) -> String? {
 }
 
 fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> String? {
-  print("Concatenating subtitles media playlist files")
+  if verboseEnabled { print("Concatenating subtitles media playlist files") }
 
   let queryless = session.downloadSD.deletingQuery
   let baseUrl = queryless.deletingLastPathComponent()
@@ -143,12 +143,12 @@ fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> Stri
   do {
     m3u8Text = try String(contentsOf: m3u8Url, encoding: .utf8)
   } catch {
-    print("Could not fetch subtitles media playlist: \(error)")
+    if verboseEnabled { print("Could not fetch subtitles media playlist: \(error)") }
   }
 
   if let signature = m3u8Text.components(separatedBy: .whitespacesAndNewlines).first {
     if signature.range(of: "#EXTM3U") == nil {
-      print("Subtitles media playlist unavailable")
+      if verboseEnabled { print("Subtitles media playlist unavailable") }
       return nil
     }
   }
@@ -164,7 +164,7 @@ fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> Stri
       let fileText = try String(contentsOf: fileUrl, encoding: .utf8)
       vttText.append(fileText)
     } catch {
-      print("Could not fetch subtitles sequence file: \(fileUrl)")
+      if verboseEnabled { print("Could not fetch subtitles sequence file: \(fileUrl)") }
       return nil
     }
   }
@@ -244,11 +244,11 @@ fileprivate func removeRedundantCues(from webVttText: String) -> String {
 }
 
 fileprivate func write(_ text: String, for session: Session) {
-  print("Writing WebVTT for \(session.year) session #\(session.number) to \(path(for: session))...", terminator: "")
+  if verboseEnabled { print("Writing WebVTT for \(session.year) session #\(session.number) to \(path(for: session))...", terminator: "") }
   do {
     try text.write(toFile: path(for: session))
   } catch {
-    print(error)
+    if verboseEnabled { print(error) }
   }
-  print("done.")
+  if verboseEnabled { print("done.") }
 }
