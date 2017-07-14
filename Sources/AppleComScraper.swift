@@ -88,12 +88,12 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
     if verboseEnabled { print("Scraping \(year) session #\(number)...", terminator: "") }
 
     guard let (description, focuses) = scrapeSessionDetails(from: sessionDoc) else {
-      if verboseEnabled { print("could not find details for \(year) session #\(number)") }
+      if verboseEnabled { print("could not find the description of \(year) session #\(number)") }
       return
     }
 
     guard let (sdVideoUrl, hdVideoUrl) = scrapeSessionResources(from: sessionDoc) else {
-      if verboseEnabled { print("could not find resources for \(year) session #\(number)") }
+      if verboseEnabled { print("could not find any resources for \(year) session #\(number)") }
       return
     }
 
@@ -180,41 +180,39 @@ fileprivate func scrapeSessionDetails(from doc: HTMLDocument) -> (description: S
 }
 
 fileprivate func scrapeSessionResources(from doc: HTMLDocument) -> (sdVideoUrl: URL, hdVideoUrl: URL)? {
-  for resourcesListItem in doc.xpath("//li[contains(@data-supplement-id, 'resources')]") {
-    // Skip the resources tab element.
-    if let `class` = resourcesListItem["class"], `class`.range(of: "supplement resources") == nil {
+  for resourcesListItem in doc.xpath("//li[contains(@data-supplement-id, 'details')]") {
+    // Skip the tab element, it's the tab's content we want.
+    if let `class` = resourcesListItem["class"], `class`.range(of: "supplement details") == nil {
       continue
     }
 
     var sdVideoUrl: URL?
     var hdVideoUrl: URL?
 
-    for videoListItem in resourcesListItem.xpath(".//li[contains(@class, 'video')]") {
-
-      videoListItem.xpath(".//a").forEach { anchor in
-        guard let text = anchor.innerHTML else {
+    resourcesListItem.xpath(".//a").forEach { anchor in
+      guard let text = anchor.innerHTML else {
+        return
+      }
+      switch text {
+      case "HD Video":
+        guard let value = anchor["href"], let url = URL(string: value) else {
           return
         }
-        switch text {
-        case "HD Video":
-          guard let value = anchor["href"], let url = URL(string: value) else {
-            return
-          }
-          hdVideoUrl = url
-        case "SD Video":
-          guard let value = anchor["href"], let url = URL(string: value) else {
-            return
-          }
-          sdVideoUrl = url
-        default:
-          break
+        hdVideoUrl = url
+      case "SD Video":
+        guard let value = anchor["href"], let url = URL(string: value) else {
+          return
         }
+        sdVideoUrl = url
+      default:
+        // Not yet handling non-video resources
+        break
       }
+    }
 
-      // These won't have been populated when a session's resources point to another session's video.
-      if let sdVideoUrl = sdVideoUrl, let hdVideoUrl = hdVideoUrl {
-        return (sdVideoUrl, hdVideoUrl)
-      }
+    // Not handling the case when missing only SD or HD
+    if let sdVideoUrl = sdVideoUrl, let hdVideoUrl = hdVideoUrl {
+      return (sdVideoUrl, hdVideoUrl)
     }
   }
   return nil
