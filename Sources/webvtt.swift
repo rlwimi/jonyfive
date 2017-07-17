@@ -5,70 +5,85 @@ import FileUtils
 var webvttCommand = Command(
   usage: "webvtt", configuration: configuration, run: execute)
 
-fileprivate let subtitlesPlaylistOption = Flag(
+fileprivate let methodOption = Flag(
   shortName: "p",
   longName: "playlist",
   type: Bool.self,
-  description: "WebVTT cues acquisition strategy\n\t[no flag] Download URL, fallback to subtitles playlist.\n\t[true] Use HLS subtitles playlist exclusively.\n\t[false] Do not fall back to HLS subtitles playlist.",
+  description: "WebVTT cues acquisition method. Default is false for direct download.\n\t[true] Concatenate HLS subtitles playlists.\n\t[false] Download file from the URL with expected format.",
   required: false,
   inheritable: false
 )
 
+fileprivate let fallbackOption = Flag(
+  shortName: "f",
+  longName: "fallback",
+  type: Bool.self,
+  description: "On failure of acquisition method, fall back to other methods. Default is true.",
+  required: false,
+  inheritable: false
+)
+
+/// Method of acquiring WebVTT cues.
+fileprivate enum AcquisitionMethod {
+  /// Fetch the full WebVTT file from a likely location. The full WebVTT file is commonly located at
+  /// a URL following a particular format, though this does not work for all sessions.  
+  case directDownload
+  /// Read the session's HLS master playlist, read its subtitles media playlist, fetch each file in
+  /// the sequence, and concatenate the files. Perform some post-processing to eliminate artifacts
+  /// of concatenation.
+  case subtitlesPlaylist
+}
+
 /// Strategy for acquiring WebVTT cues.
 ///
-/// There are two methods of acquiring a session's WebVTT cues (captions, subtitles):
-///
-/// 1. Fetch the full WebVTT file from a likely location. The full WebVTT file is commonly located
-///    at a URL following a particular format, though this does not work for all sessions.
-/// 2. Read the session's HLS master playlist, read its subtitles media playlist, fetch each file
-///    in the sequence, and concatenate the files. Perform some post-processing to eliminate
-///    artifacts of concatenation.
-///
-/// - note: For each session, one, none, or both strategies may be effective. When both are
-///         effective, the content is not always identical. There may be millisecond differences in
-///         cue timing or even cue content differences in rare cases.
+/// Our two methods of acquiring WebVTT cues yield different result sets. The timing can be 
+/// different by milliseconds, a largely inconsequential difference. Also, transcription
+/// content may differ. Most notably, the direct download transcript typically includes a closing
+/// caption ("Thank you", or "[Applause]") not included in the streaming captions.
 fileprivate enum AcquisitionStrategy {
-  /// Attempt URL download, fall back to subtitles playlist file concatenation, if necessary.
-  case fallback
   /// Use HLS subtitles playlist file concatenation exclusively.
-  case useSubtitlesPlaylist
+  case onlySubtitlesPlaylist
   /// Use direct download, exclusively.
-  case useDirectDownload
+  case onlyDirectDownload
+  /// Attempt subtitles playlist file concatenation, falling back to URL download if necessary.
+  case preferSubtitlesPlaylist
+  /// Attempt URL download, falling back to subtitles playlist file concatenation, if necessary.
+  case preferDirectDownload
 
-  var usesDownloadUrl: Bool {
+  var methods: [AcquisitionMethod] {
     switch self {
-    case .fallback:
-      return true
-    case .useSubtitlesPlaylist:
-      return false
-    case .useDirectDownload:
-      return true
-    }
-  }
-
-  var usesSubtitlesPlaylist: Bool {
-    switch self {
-    case .fallback:
-      return true
-    case .useSubtitlesPlaylist:
-      return true
-    case .useDirectDownload:
-      return false
+    case .onlySubtitlesPlaylist:
+      return [.subtitlesPlaylist]
+    case .onlyDirectDownload:
+      return [.directDownload]
+    case .preferSubtitlesPlaylist:
+      return [.subtitlesPlaylist, .directDownload]
+    case .preferDirectDownload:
+      return [.directDownload, .subtitlesPlaylist]
     }
   }
 }
 
-fileprivate var acquisitionStrategy: AcquisitionStrategy = .fallback
+fileprivate var acquisitionStrategy: AcquisitionStrategy = .preferSubtitlesPlaylist
 
 private func configuration(command: Command) {
   command.shortMessage = "download WebVTT files"
   command.longMessage = "Download each session's WebVTT file, write to disk."
 
-  command.add(flag: subtitlesPlaylistOption)
+  command.add(flags: [methodOption, fallbackOption])
 
   command.preRun = { flags, args in
-    if let usePlaylists = flags.getBool(name: subtitlesPlaylistOption.longName) {
-      acquisitionStrategy = (usePlaylists ? .useSubtitlesPlaylist : .useDirectDownload)
+    let usePlaylists = flags.getBool(name: methodOption.longName) ?? false
+    let fallback = flags.getBool(name: fallbackOption.longName) ?? true
+
+    if usePlaylists && fallback {
+      acquisitionStrategy = .preferSubtitlesPlaylist
+    } else if usePlaylists && fallback == false {
+      acquisitionStrategy = .onlySubtitlesPlaylist
+    } else if usePlaylists == false && fallback {
+      acquisitionStrategy = .preferDirectDownload
+    } else if usePlaylists == false && fallback == false {
+      acquisitionStrategy = .onlyDirectDownload
     }
     return true
   }
@@ -87,19 +102,9 @@ private func execute(flags: Flags, args: [String]) {
   sessions.forEach { session in
     if verboseEnabled { print("##### \(session.year) session #\(session.number) #####") }
 
-    var vttText: String? = nil
-
-    if acquisitionStrategy.usesDownloadUrl {
-      vttText = webVttText(from: session.webVttUrl)
-    }
-
-    if vttText == nil && acquisitionStrategy.usesSubtitlesPlaylist {
-      vttText = concatenateSubtitlesPlaylistFiles(for: session)
-    }
-
-    if var vttText = vttText {
-      vttText = normalize(vttText)
-      write(vttText, for: session)
+    if var webVttText = acquireWebVttText(for: session, using: acquisitionStrategy.methods) {
+      webVttText = normalize(webVttText)
+      write(webVttText, for: session)
     }
   }
 }
@@ -110,6 +115,24 @@ fileprivate var path: String {
 
 fileprivate func path(for session: Session) -> String {
   return [path, String(session.year), "\(session.number).vtt"].joined(separator: "/")
+}
+
+fileprivate func acquireWebVttText(for session: Session, using methods: [AcquisitionMethod]) -> String? {
+  for method in methods {
+    if let text = acquireWebVttText(for: session, using: method) {
+      return text
+    }
+  }
+  return nil
+}
+
+fileprivate func acquireWebVttText(for session: Session, using method: AcquisitionMethod) -> String? {
+  switch method {
+  case .directDownload:
+    return webVttText(from: session.webVttUrl)
+  case .subtitlesPlaylist:
+    return concatenateSubtitlesPlaylistFiles(for: session)
+  }
 }
 
 fileprivate func webVttText(from url: URL) -> String? {
