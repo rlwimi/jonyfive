@@ -47,15 +47,7 @@ struct Session: Identifiable {
   let title: String
   let track: Track
   let year: String
-
-  var webVttUrl: URL {
-    var url = downloadSD.deletingQuery
-    url.deletePathExtension()
-    let basename = url.lastPathComponent
-    url.deleteLastPathComponent()
-    url.appendPathComponent("subtitles/eng/\(basename).vtt")
-    return url
-  }
+  let webVtt: URL
 
   init(
     conference: Conference,
@@ -68,6 +60,7 @@ struct Session: Identifiable {
     number: String,
     title: String,
     track: Track,
+    webVtt: URL? = nil,
     year: String) {
 
     self.identifier = Session.makeIdentifier(conference: conference, year: year, number: number)
@@ -82,6 +75,17 @@ struct Session: Identifiable {
     self.title = title
     self.track = track
     self.year = year
+
+    if let webVtt = webVtt {
+      self.webVtt = webVtt
+    } else {
+      var url = downloadSD.deletingQuery
+      url.deletePathExtension()
+      let basename = url.lastPathComponent
+      url.deleteLastPathComponent()
+      url.appendPathComponent("subtitles/eng/\(basename).vtt")
+      self.webVtt = url
+    }
   }
 }
 

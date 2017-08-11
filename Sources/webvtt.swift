@@ -129,7 +129,7 @@ fileprivate func acquireWebVttText(for session: Session, using methods: [Acquisi
 fileprivate func acquireWebVttText(for session: Session, using method: AcquisitionMethod) -> String? {
   switch method {
   case .directDownload:
-    return webVttText(from: session.webVttUrl)
+    return webVttText(from: session.webVtt)
   case .subtitlesPlaylist:
     return concatenateSubtitlesPlaylistFiles(for: session)
   }
