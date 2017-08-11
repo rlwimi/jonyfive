@@ -26,6 +26,12 @@
       "version": "2.2.1"
     },
     {
+      "package": "Regex",
+      "reason": null,
+      "repositoryURL": "https://github.com/sharplet/Regex.git",
+      "version": "1.1.0"
+    },
+    {
       "package": "StringScanner",
       "reason": null,
       "repositoryURL": "https://github.com/oarrabi/StringScanner",
