@@ -1,7 +1,7 @@
 import Foundation
 import Guaka
 
-var rootCommand = Command(usage: "wwwww", configuration: configuration, run: execute)
+var rootCommand = Command(usage: "jonyfive", configuration: configuration, run: execute)
 
 private let verboseOption = Flag(
   shortName: "v",

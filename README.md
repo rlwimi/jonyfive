@@ -1,4 +1,4 @@
-# wwwww
+# jonyfive
 
 CLI tool for doing useful things after scraping WWDC session metadata
 
@@ -19,7 +19,3 @@ Web scraping is fragile by nature, and small changes to the page HTML naming or 
 ## Thanks
 
 Based on [Guaka](https://github.com/nsomar/Guaka) and [Kanna](https://github.com/tid-kijyun/Kanna).
-
-## Name
-
-Yes, that is [five dubs](http://www.theonion.com/blogpost/fuck-everything-were-doing-five-blades-11056). As in, _world wide web dub dub_. Maybe _dub dub world wide web_. _dub dub dub dub dub_ if you like. Or even _dub dubbity dub dub dubbity_. Maybe it just looks like a squiggly line.
