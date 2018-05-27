@@ -117,7 +117,7 @@ fileprivate func makeKeynoteSession(for year: Int, download: URL, image: URL?, w
 }
 
 fileprivate func scrapeSessions(from year: Int, filterBy filterSession: String? = nil) -> [Session] {
-  guard let yearDoc = HTML(url: wwdcVideosUrl(for: year), encoding: .utf8) else {
+  guard let yearDoc = try? HTML(url: wwdcVideosUrl(for: year), encoding: .utf8) else {
     if verboseEnabled { print("could not read URL for year \(year)") }
     return []
   }
@@ -171,7 +171,7 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
       return
     }
 
-    guard let sessionDoc = HTML(url: webpageUrl, encoding: .utf8) else {
+    guard let sessionDoc = try? HTML(url: webpageUrl, encoding: .utf8) else {
       if verboseEnabled { print("could not read session page: \(webpageUrl.absoluteString)") }
       return
     }
@@ -195,7 +195,7 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
       downloadHD: hdVideoUrl,
       downloadSD: sdVideoUrl,
       duration: nil,
-      focuses: focuses.components(separatedBy: ", ").map(Focus.init(rawValue:)).flatMap({ $0 }),
+      focuses: focuses.components(separatedBy: ", ").compactMap(Focus.init(rawValue:)),
       image: imageUrl,
       number: number,
       title: title,

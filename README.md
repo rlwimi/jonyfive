@@ -8,7 +8,7 @@ Once you are up and running, use `-h`/`--help` flags for more information about 
 
 ## Getting Started
 
-1. Follow the installation instructions for dependency [Kanna](https://github.com/tid-kijyun/Kanna), specifically the instructions for Swift 3 via Swift Package Manager.
+1. Follow the installation instructions for dependency [Kanna](https://github.com/tid-kijyun/Kanna), specifically the instructions for Swift 4 via Swift Package Manager.
 1. Run `swift package update`.
 1. Optionally run `swift package generate-xcodeproj` if you're interested in working with the implementation in Xcode.
 1. Run `swift build`.

@@ -89,12 +89,6 @@ extension Array where Element == Session {
   }
 }
 
-extension String: NodeRepresentable {
-  public func represented() throws -> Node {
-    return Node(self)
-  }
-}
-
 private extension String {
   /// Mimic escaping found in existing asciiwwdc.com YAML.
   ///
