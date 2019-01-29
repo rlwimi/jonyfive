@@ -40,6 +40,7 @@ struct Session: Identifiable {
   let description: String
   let downloadHD: URL
   let downloadSD: URL
+  let hls: URL
   let duration: Int?
   let focuses: [Focus]
   let image: URL?
@@ -54,6 +55,7 @@ struct Session: Identifiable {
     description: String,
     downloadHD: URL,
     downloadSD: URL,
+    hls: URL,
     duration: Int?,
     focuses: [Focus],
     image: URL?,
@@ -68,6 +70,7 @@ struct Session: Identifiable {
     self.description = description
     self.downloadHD = downloadHD
     self.downloadSD = downloadSD
+    self.hls = hls
     self.duration = duration
     self.focuses = focuses
     self.image = image
@@ -83,7 +86,7 @@ struct Session: Identifiable {
       url.deletePathExtension()
       let basename = url.lastPathComponent
       url.deleteLastPathComponent()
-      url.appendPathComponent("subtitles/eng/\(basename).vtt")
+      url.appendPathComponent("subtitles/zho/\(basename).vtt")
       self.webVtt = url
     }
   }
@@ -100,9 +103,11 @@ extension Session: Equatable {
   static func == (lhs: Session, rhs: Session) -> Bool {
     return lhs.year == rhs.year &&
       lhs.number == rhs.number &&
+      lhs.conference == rhs.conference &&
       lhs.description == rhs.description &&
       lhs.downloadHD == rhs.downloadHD &&
       lhs.downloadSD == rhs.downloadSD &&
+      lhs.hls == rhs.hls &&
       lhs.duration == rhs.duration &&
       lhs.focuses == rhs.focuses &&
       lhs.image == rhs.image &&

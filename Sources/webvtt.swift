@@ -158,7 +158,7 @@ fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> Stri
 
   let queryless = session.downloadSD.deletingQuery
   let baseUrl = queryless.deletingLastPathComponent()
-  let m3u8Url = baseUrl.appendingPathComponent("subtitles/eng/prog_index.m3u8")
+  let m3u8Url = baseUrl.appendingPathComponent("subtitles/zho/prog_index.m3u8")
 
   var vttText = ""
   var m3u8Text: String = ""
@@ -182,7 +182,7 @@ fileprivate func concatenateSubtitlesPlaylistFiles(for session: Session) -> Stri
 
   for fileLine in fileLines {
     let file = fileLine.trimmingCharacters(in: .whitespacesAndNewlines)
-    let fileUrl = baseUrl.appendingPathComponent("subtitles/eng/\(file)")
+    let fileUrl = baseUrl.appendingPathComponent("subtitles/zho/\(file)")
     do {
       let fileText = try String(contentsOf: fileUrl, encoding: .utf8)
       vttText.append(fileText)

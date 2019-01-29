@@ -64,7 +64,7 @@ fileprivate func scrapeKeynote(from year: Int) -> Session? {
     if verboseEnabled { print("could not read metadata") }
     return nil
   }
-  let session = makeKeynoteSession(for: year, download: metadata.download, image: keynoteImageUrl(from: html), webVtt: metadata.webVtt)
+  let session = makeKeynoteSession(for: year, download: metadata.download, hls: metadata.hls, image: keynoteImageUrl(from: html), webVtt: metadata.webVtt)
   return session
 }
 
@@ -82,13 +82,13 @@ fileprivate func keynoteImageUrl(from html: String) -> URL? {
     .flatMap { URL(string: $0) }
 }
 
-fileprivate func keynoteMetadata(from url: URL) -> (download: URL, webVtt: URL)? {
+fileprivate func keynoteMetadata(from url: URL) -> (download: URL, hls: URL, webVtt: URL)? {
   guard
     let metadata = try? Data(contentsOf: url),
     let json = try? JSONSerialization.jsonObject(with: metadata, options: []) as? [String: Any],
     let videos = json?["videoSrc"] as? [String: Any],
-    //    let hlsUrl = videos["hls"] as? String,
-    //    let hls = URL(string: hlsUrl),
+    let hlsUrl = videos["hls"] as? String,
+    let hls = URL(string: hlsUrl),
     let downloadUrl = videos["nonhls"] as? String,
     let download = URL(string: downloadUrl),
     let webVttUrl = json?["videoCC"] as? String,
@@ -96,15 +96,16 @@ fileprivate func keynoteMetadata(from url: URL) -> (download: URL, webVtt: URL)?
     else {
       return nil
   }
-  return (download, webVtt)
+  return (download, hls, webVtt)
 }
 
-fileprivate func makeKeynoteSession(for year: Int, download: URL, image: URL?, webVtt: URL) -> Session {
+fileprivate func makeKeynoteSession(for year: Int, download: URL, hls: URL, image: URL?, webVtt: URL) -> Session {
   return Session(
     conference: Conference.wwdc,
     description: "WWDC \(year) Keynote",
     downloadHD: download,
     downloadSD: download,
+    hls: hls,
     duration: nil,
     focuses: [.iOS, .macOS, .tvOS, .watchOS],
     image: image,
@@ -183,6 +184,11 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
       return
     }
 
+    guard let hls = scrapeHlsPlaylistUrl(from: sessionDoc) else {
+      if verboseEnabled { print("could not find HLS stream for \(year) session #\(number)") }
+      return
+    }
+
     guard let (sdVideoUrl, hdVideoUrl) = scrapeSessionResources(from: sessionDoc) else {
       if verboseEnabled { print("could not find any resources for \(year) session #\(number)") }
       return
@@ -194,6 +200,7 @@ fileprivate func scrapeSessions(from year: Int, inTrackWith nodes: XMLNodeSet) -
       description: description,
       downloadHD: hdVideoUrl,
       downloadSD: sdVideoUrl,
+      hls: hls,
       duration: nil,
       focuses: focuses.components(separatedBy: ", ").map(Focus.init(rawValue:)).flatMap({ $0 }),
       image: imageUrl,
@@ -237,6 +244,14 @@ fileprivate func scrapeSessionPageUrl(from anchor: Kanna.XMLElement) -> URL {
       return baseUrl
   }
   return hrefUrl
+}
+
+fileprivate func scrapeHlsPlaylistUrl(from doc: HTMLDocument) -> URL? {
+  let hrefs = doc.xpath("(//video/source['src'])[1]")
+  guard hrefs.count > 0, let text = hrefs[0].text else {
+    return nil
+  }
+  return URL(string: text)
 }
 
 fileprivate func scrapeSessionDetails(from doc: HTMLDocument) -> (description: String, focuses: String)? {
