@@ -1,3 +1,7 @@
+# Deprecated
+
+The scraper is out of date, and I don't plan on updating it.
+
 # jonyfive
 
 CLI tool for doing useful things after scraping WWDC session metadata
