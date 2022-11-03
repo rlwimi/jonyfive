@@ -1,6 +1,11 @@
-# Deprecated
+# ⚠️ Archived
+This tool is currently broken. For starters, the XPaths are hopelessly out of date.
 
-The scraper is out of date, and I don't plan on updating it.
+This tool was originally very hastily slapped together to the point of working, in support of [`my fork`](https://github.com/rlwimi/wwdc-session-transcripts) of [`ASCIIwwdc/wwdc-session-transcripts`](https://github.com/ASCIIwwdc/wwdc-session-transcripts) while that repo seemed abandoned, both in support of [`rlwimi/major-input`](https://github.com/rlwimi/major-input). 
+
+I still see value in a tool like this. If I revive the project, I imagine moving to [`apple/swift-argument-parser`](https://github.com/apple/swift-argument-parser) and [Foundation's XML/XPath support](https://developer.apple.com/documentation/foundation/archives_and_serialization/xml_processing_and_modeling).
+
+---
 
 # jonyfive
 
